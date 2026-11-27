@@ -1045,7 +1045,7 @@ void RemoteWorld::updateControlledVehicle(std::span<const std::byte> packet,
 
   if (surface) {
     const bool rotated = pose.rotation && std::abs(pose.rotationLength - 1.0f) < 0.01f;
-    auto& hull = controlledHullTrack.push(static_cast<float>(serverTick) * bf2::kGhostTickMs,
+    auto& hull = controlledHullTrack.push(static_cast<double>(serverTick) * bf2::kGhostTickMs,
                                           true, rotated);
     hull.position = *pose.position;
     hull.velocity = pose.velocity;

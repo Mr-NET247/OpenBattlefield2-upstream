@@ -210,7 +210,8 @@ class WorldView {
   std::optional<SeatAt> seatOf(std::uint16_t seatId, bool drawing = false);
   // An object's rotation as drawn: its record's quaternion (conjugated — the
   // engine's are row-vector ones), else its spawner's, else none.
-  Mat4 objectRotation(std::uint16_t id, const net::bf2::RemoteObject& object);
+  Mat4 objectRotation(std::uint16_t id, const std::optional<std::array<float, 4>>& rotation);
+  double vehicleRenderTick() const;
   const std::vector<game::VehicleSeat>& seatsOf(const std::string& vehicle);
   const anim::System* animationSystem(const std::string& path);
 

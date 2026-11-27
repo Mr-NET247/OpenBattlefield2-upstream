@@ -58,7 +58,7 @@ inline constexpr float kGhostMaxGapMs = 500.0f;          // 0x62d130 and 0x62f7d
 inline constexpr float kGhostTickMs = 1000.0f / 30.0f;   // 0x5b9ee0: tick * 0.0333 s
 
 struct GhostSample {
-  float timeMs = 0.0f;
+  double timeMs = 0.0;
   Vec3f position;
   std::optional<Vec3f> velocity;
   float bodyYaw = 0.0f;           // a soldier's 0x2 + 0x4 (soldier_state.h)
@@ -91,18 +91,19 @@ std::array<float, 4> interpolateGhostRotation(const std::array<float, 4>& a,
 
 class GhostTrack {
  public:
-  static constexpr std::size_t kSlots = 4;  // the ring of four updates (see above)
+  static constexpr std::size_t kSlots = 16;
 
   // A new slot at `timeMs`, starting as a copy of the newest; the caller then
   // writes what the record carried.
-  GhostSample& push(float timeMs, bool hasPosition = true, bool hasRotation = true);
+  GhostSample& push(double timeMs, bool hasPosition = true, bool hasRotation = true);
 
   std::size_t count() const { return count_; }
   const GhostSample* newest() const;
 
   // The pose at `nowMs`. nullopt only when nothing was pushed.
-  std::optional<GhostPose> poseAt(float nowMs, float interpolationMs = kGhostInterpolationMs,
-                                  float extrapolationMs = kGhostExtrapolationMs) const;
+  std::optional<GhostPose> poseAt(double nowMs, float interpolationMs = kGhostInterpolationMs,
+                                  float extrapolationMs = kGhostExtrapolationMs,
+                                  bool holdAtGaps = false, float maximumSpeed = 20.0f) const;
 
   // The hull we drive, led `milliseconds` past its newest update along the last
   // two updates' motion while the next one is in flight. **Ours, not the

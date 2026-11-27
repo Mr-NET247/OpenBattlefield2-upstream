@@ -120,7 +120,43 @@ static void testControlledHullLeadIsBounded() {
   CHECK(relocated && near(relocated->position.x, 50));
 }
 
+static void testBufferedHullDoesNotUseFutureFieldsWhenHistoryRollsOver() {
+  GhostTrack track;
+  const std::array<float, 4> initialRotation{0, 0, 0, 1};
+  const std::array<float, 4> nextRotation{0, 1, 0, 0};
+  auto& initial = track.push(0);
+  initial.position = {10, 0, 0};
+  initial.rotation = initialRotation;
+  for (std::size_t i = 1; i <= GhostTrack::kSlots; ++i) {
+    track.push(10.0f * static_cast<float>(i), false, false);
+  }
+  auto& update = track.push(170);
+  update.position = {12, 0, 0};
+  update.rotation = nextRotation;
+
+  for (const float time : {0.0f, 165.0f}) {
+    const auto pose = track.poseAt(time, 0, 0, true);
+    CHECK(pose && near(pose->position.x, 10.0f) && pose->rotation == initialRotation);
+  }
+  const auto next = track.poseAt(170, 0, 0, true);
+  CHECK(next && near(next->position.x, 12.0f) && next->rotation == nextRotation);
+}
+
+static void testBufferedHullWaitsForFirstRotation() {
+  GhostTrack track;
+  track.push(100, true, false).position = {10, 0, 0};
+  const std::array<float, 4> rotation{0, 1, 0, 0};
+  track.push(150, false, true).rotation = rotation;
+
+  const auto before = track.poseAt(149, 0, 0, true);
+  CHECK(before && !before->rotation);
+  const auto at = track.poseAt(150, 0, 0, true);
+  CHECK(at && at->rotation == rotation);
+}
+
 TEST_MAIN({
+  testBufferedHullDoesNotUseFutureFieldsWhenHistoryRollsOver();
+  testBufferedHullWaitsForFirstRotation();
   testControlledHullLeadIsBounded();
   testYawInterpolatesAcrossWrap();
   testExtrapolationCarriesTheVertical();

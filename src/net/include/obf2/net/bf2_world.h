@@ -195,6 +195,8 @@ class WorldView {
   }
   const SeatAim* seatAim(std::uint16_t id) const;
   const SeatAim* seatAimAt(std::uint16_t id, std::uint32_t tick) const;
+  std::optional<Vec3f> presentedSeatAngle(std::uint16_t id, std::uint16_t root,
+                                          std::size_t bundle, double tick) const;
   const SeatWeaponState* controlledSeatWeapon(std::uint16_t id, std::size_t slot = 0) const {
     if (id != weaponSeat_ || slot >= seatWeapons_.size()) return nullptr;
     const auto& weapon = seatWeapons_[slot];
@@ -326,7 +328,9 @@ class WorldView {
   // tick past the last tick. Blending between ticks by the frame is ours: the
   // original has `BF2FrameInterpolator` (0x89d770's file) for it, not reversed.
   std::optional<GhostPose> poseOf(std::uint16_t id, float fraction = 0.0f) const;
-  std::optional<GhostPose> poseAtTime(std::uint16_t id, float nowMs) const;
+  std::optional<GhostPose> poseAtTime(std::uint16_t id, double nowMs, bool holdAtGaps = false,
+                                      float maximumSpeed = 125.0f) const;
+  float interpolationDelay(bool holdAtGaps) const;
   int rejected() const { return rejected_; }
 
   // A check on the parsing: a soldier stands on the ground, so a constant
@@ -488,6 +492,7 @@ class WorldView {
   std::uint32_t gameTick_ = 0;
   std::function<std::optional<VehicleArmor>(std::uint32_t)> vehicleArmor_;
   std::uint32_t newestPacketTick_ = 0;
+  float packetIntervalTicks_ = 2.0f;
   bool tickSet_ = false;
 };
 

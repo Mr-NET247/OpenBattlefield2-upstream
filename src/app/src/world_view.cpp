@@ -301,16 +301,16 @@ Vec3f WorldView::carry(std::uint16_t id, const net::bf2::RemoteObject& object,
   return Vec3f{blended.x, blended.y + pivot, blended.z};
 }
 
-Mat4 WorldView::objectRotation(std::uint16_t id, const net::bf2::RemoteObject& object) {
-  if (object.rotation) {
+Mat4 WorldView::objectRotation(std::uint16_t id, const std::optional<std::array<float, 4>>& rotation) {
+  if (rotation) {
     // The engine's quaternion is a row-vector one: conjugated for ours.
-    const auto& r = *object.rotation;
+    const auto& r = *rotation;
     return rotationFromQuaternion({-r[0], -r[1], -r[2], r[3]});
   }
   const auto found = resolved_.find(id);
   if (found != resolved_.end() && found->second.placed.hasRotation) {
-    const auto& rotation = found->second.placed.rotation;
-    return rotationYawPitchRoll(rotation.x, rotation.y, rotation.z);
+    const auto& placed = found->second.placed.rotation;
+    return rotationYawPitchRoll(placed.x, placed.y, placed.z);
   }
   return Mat4::identity();
 }
@@ -344,6 +344,11 @@ const std::vector<game::VehicleSeat>& WorldView::seatsOf(const std::string& vehi
     found = seatsByVehicle_.emplace(vehicle, game::vehicleSeats(remote_->registry, vehicle)).first;
   }
   return found->second;
+}
+
+double WorldView::vehicleRenderTick() const {
+  return static_cast<double>(remote_->world.gameTick()) - 1.0 +
+         remote_->tick.pending / server::kTickTime;
 }
 
 std::optional<Vec3f> WorldView::displayedTurretAngle(std::uint16_t root, unsigned seat,
@@ -390,9 +395,7 @@ std::optional<Vec3f> WorldView::displayedTurretAngle(std::uint16_t root, unsigne
     }
     return state.angle;
   }
-  // Anyone else's: the angle the seat's networkable last set.
-  return aim && aim->root == root && bundle < aim->angles.size()
-      ? std::optional<Vec3f>(aim->angles[bundle]) : std::nullopt;
+  return remote_->world.presentedSeatAngle(id, root, bundle, vehicleRenderTick());
 }
 
 std::optional<WorldView::VehicleView> WorldView::occupiedCamera(float lookX, float lookY,
@@ -468,11 +471,7 @@ std::optional<WorldView::VehicleView> WorldView::occupiedCamera(float lookX, flo
     chaseDirection_.reset();
     flyByEye_.reset();  // setViewMode(5) clears the recorded frames
   }
-  auto rotation = objectRotation(root, vehicle->second);
-  if (pose->rotation) {
-    const auto& q = *pose->rotation;
-    rotation = rotationFromQuaternion({-q[0], -q[1], -q[2], q[3]});
-  }
+  const auto rotation = objectRotation(root, pose->rotation);
   auto joints = Mat4::identity();
   bool followsYaw = false, followsPitch = false;
   for (const auto& joint : mount->joints) {
@@ -637,13 +636,9 @@ std::optional<WorldView::SeatAt> WorldView::seatOf(std::uint16_t seatId, bool dr
   }
   const auto local = seatId == remote_->ourSoldier ? remote_->occupiedVehiclePose() : std::nullopt;
   const auto pose = local ? local
-      : remote_->world.poseOf(vehicleId, remote_->tick.pending / server::kTickTime);
+      : remote_->world.poseAtTime(vehicleId, vehicleRenderTick() * net::bf2::kGhostTickMs, true);
   const Vec3f position = pose ? pose->position : vehicle->second.position;
-  Mat4 rotation = objectRotation(vehicleId, vehicle->second);
-  if (pose && pose->rotation) {
-    const auto& q = *pose->rotation;
-    rotation = rotationFromQuaternion({-q[0], -q[1], -q[2], q[3]});
-  }
+  const auto rotation = objectRotation(vehicleId, pose ? pose->rotation : vehicle->second.rotation);
   return SeatAt{vehicleId, &seats[index], translation(position) * rotation * mountedSeat};
 }
 
@@ -1308,7 +1303,8 @@ void WorldView::collect(std::vector<gfx::MeshRenderer::DrawItem>& out, int frame
                                       : owner && owner->object != id ? owner->object : 0;
     // Drawn where its track puts it now (ghost_track.h), not where the last update
     // left it; the hull we sit in where our own prediction has it.
-    auto pose = remote_->world.poseOf(id, remote_->tick.pending / server::kTickTime);
+    auto pose = soldier ? remote_->world.poseOf(id, remote_->tick.pending / server::kTickTime)
+        : remote_->world.poseAtTime(id, vehicleRenderTick() * net::bf2::kGhostTickMs, true);
     if (id == localVehicle && localVehiclePose) pose = localVehiclePose;
     Vec3f drawAt = pose ? pose->position : object.position;
     if (soldier && pose && !options_.drawPredicted) drawAt = carry(id, object, *pose);
@@ -1338,7 +1334,7 @@ void WorldView::collect(std::vector<gfx::MeshRenderer::DrawItem>& out, int frame
         // one has arrived.
         const level::PlacedAt& placed = resolved_[id].placed;
         Mat4 place = translation(drawAt);
-        const auto rotation = pose && pose->rotation ? pose->rotation : object.rotation;
+        const auto rotation = pose ? pose->rotation : object.rotation;
         if (rotation) {
           // The engine's quaternion is a row-vector one: conjugated for ours.
           const auto& r = *rotation;

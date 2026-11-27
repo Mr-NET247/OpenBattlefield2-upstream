@@ -10,13 +10,23 @@
 namespace obf2::net::bf2 {
 
 std::optional<GhostPose> WorldView::poseOf(std::uint16_t id, float fraction) const {
-  return poseAtTime(id, (static_cast<float>(gameTick_) - 1.0f + fraction) * kGhostTickMs);
+  return poseAtTime(id, (static_cast<double>(gameTick_) - 1.0 + fraction) * kGhostTickMs);
 }
 
-std::optional<GhostPose> WorldView::poseAtTime(std::uint16_t id, float nowMs) const {
+float WorldView::interpolationDelay(bool holdAtGaps) const {
+  return holdAtGaps
+      ? std::clamp((packetIntervalTicks_ + 1.5f) * kGhostTickMs, kGhostInterpolationMs, 166.7f)
+      : kGhostInterpolationMs;
+}
+
+std::optional<GhostPose> WorldView::poseAtTime(std::uint16_t id, double nowMs, bool holdAtGaps,
+                                               float maximumSpeed) const {
   const auto found = objects_.find(id);
   if (found == objects_.end()) return std::nullopt;
-  if (auto pose = found->second.track.poseAt(nowMs)) {
+  const float extrapolation = holdAtGaps ? 200.0f : kGhostExtrapolationMs;
+  const float speed = found->second.netClass == GhostClass::Soldier ? 20.0f : maximumSpeed;
+  const float delay = interpolationDelay(holdAtGaps);
+  if (auto pose = found->second.track.poseAt(nowMs, delay, extrapolation, holdAtGaps, speed)) {
     return pose;
   }
   GhostPose still;
@@ -31,6 +41,7 @@ void WorldView::resetMotion() {
   newestPacketTick_ = 0;
   gameTick_ = 0;
   tickSet_ = false;
+  packetIntervalTicks_ = 2.0f;
   seatAim_.clear();
   weaponSeat_ = 0;
   seatWeaponTick_ = 0;
@@ -46,7 +57,7 @@ bool WorldView::feedControlledVehicle(std::uint16_t id, std::uint32_t tick,
   auto found = objects_.find(id);
   if (found == objects_.end() || (state.position && !looksSane(*state.position, false))) return false;
   auto& object = found->second;
-  const float time = static_cast<float>(tick) * kGhostTickMs;
+  const double time = static_cast<double>(tick) * kGhostTickMs;
   if (object.track.newest() && time < object.track.newest()->timeMs) return false;
   if (state.position) object.position = *state.position;
   const bool validRotation = state.rotation && std::abs(state.rotationLength - 1.0f) < 0.01f;
@@ -77,6 +88,31 @@ const WorldView::SeatAim* WorldView::seatAimAt(std::uint16_t id, std::uint32_t t
   return &samples.front();
 }
 
+std::optional<Vec3f> WorldView::presentedSeatAngle(std::uint16_t id, std::uint16_t root,
+                                                  std::size_t bundle, double tick) const {
+  const auto found = seatAim_.find(id);
+  if (found == seatAim_.end()) return std::nullopt;
+  const auto& samples = found->second;
+  if (samples.back().root != root || bundle >= samples.back().angles.size()) return std::nullopt;
+  const double target = tick - interpolationDelay(true) / kGhostTickMs;
+  const auto after = std::ranges::upper_bound(samples, target, {}, &SeatAim::tick);
+  const auto angle = [&](const SeatAim& sample) {
+    return sample.root == root && bundle < sample.angles.size()
+        ? sample.angles[bundle] : samples.back().angles[bundle];
+  };
+  if (after == samples.begin()) return angle(*after);
+  const auto& before = *std::prev(after);
+  const Vec3f first = angle(before);
+  if (after == samples.end()) return first;
+  // Use the same gap cutoff as the hull, so sparse seat updates do not
+  // turn a missing interval into continuous apparent motion.
+  if ((after->tick - before.tick) * kGhostTickMs >= kGhostMaxGapMs) return first;
+  const Vec3f second = angle(*after);
+  const float weight = static_cast<float>((target - before.tick) / (after->tick - before.tick));
+  const auto blend = [weight](float a, float b) { return a + std::remainder(b - a, 360.0f) * weight; };
+  return Vec3f{blend(first.x, second.x), blend(first.y, second.y), blend(first.z, second.z)};
+}
+
 void WorldView::eraseSeatAim(std::uint16_t object) {
   const auto aim = seatAim_.find(weaponSeat_);
   if (object == weaponSeat_ || (aim != seatAim_.end() && aim->second.back().root == object)) {
@@ -92,6 +128,9 @@ void WorldView::applySeatRotations(std::uint16_t id, SeatRotationLayout layout, 
                                   const std::vector<SeatRotation>& rotations, bool controlled) {
   auto& samples = seatAim_[id];
   if (!samples.empty() && tick < samples.back().tick) return;
+  // Sparse updates carry omitted fields within one hull. Reassigning a
+  // seat ID to a different hull starts a fresh interpolation history.
+  if (!samples.empty() && samples.back().root != layout.root) samples.clear();
   if (samples.empty()) {
     samples.emplace_back();
   } else if (tick != samples.back().tick) {
@@ -547,8 +586,13 @@ void WorldView::feedGhosts(std::span<const std::byte> packet) {
   // controlled-object state set.
   // The packet's server time: the header's tick, as 0x5b9ee0 turns it into time.
   const auto header = readGhostHeader(packet);
-  const float packetMs = header ? static_cast<float>(header->time) * kGhostTickMs : 0.0f;
+  const double packetMs = header ? static_cast<double>(header->time) * kGhostTickMs : 0.0;
   if (header && header->time > newestPacketTick_) {
+    if (newestPacketTick_) {
+      const float interval = static_cast<float>(header->time - newestPacketTick_);
+      const float gain = interval > packetIntervalTicks_ ? 0.15f : 0.025f;
+      packetIntervalTicks_ = std::lerp(packetIntervalTicks_, std::min(interval, 5.0f), gain);
+    }
     newestPacketTick_ = header->time;
   }
 

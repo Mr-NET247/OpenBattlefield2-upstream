@@ -425,6 +425,94 @@ static void testProjectileDetonationQueuesOnce() {
   CHECK_EQ(world.detonationCount(), 1);
 }
 
+static void testHullPlaybackKeepsSubframesAtHighServerTicks() {
+  using namespace obf2::net::bf2;
+  WorldView world;
+  constexpr std::uint16_t hull = 500;
+  constexpr std::uint32_t tick = 32'000'000;
+  Event create;
+  create.object = CreateObject{.templateId = 42, .networkId = hull,
+                              .position = obf2::Vec3f{10, 0, 0}};
+  world.feedEvents({create});
+  SimpleObjectState state;
+  state.position = obf2::Vec3f{10, 0, 0};
+  CHECK(world.feedControlledVehicle(hull, tick, state));
+  state.position = obf2::Vec3f{11, 0, 0};
+  CHECK(world.feedControlledVehicle(hull, tick + 1, state));
+
+  const double delay = world.interpolationDelay(true);
+  for (const double fraction : {0.25, 0.5, 0.75}) {
+    const auto pose = world.poseAtTime(hull, (tick + fraction) * kGhostTickMs + delay, true, 45.0f);
+    CHECK(pose && pose->mode == GhostPrediction::Interpolated);
+    CHECK(pose && std::abs(pose->position.x - (10.0 + fraction)) < 0.001);
+  }
+}
+
+static void testSeatInterpolationAcrossHullChangesAndGaps() {
+  using namespace obf2::net::bf2;
+  using obf2::net::BitWriter;
+  WorldView world;
+  std::uint16_t root = 500;
+  constexpr std::uint16_t seat = 501;
+  world.setSeatRotationLayout([&](std::uint16_t id) -> std::optional<WorldView::SeatRotationLayout> {
+    if (id != seat) return std::nullopt;
+    return WorldView::SeatRotationLayout{root, 1, {}};
+  });
+  const auto feed = [&](std::uint32_t tick, bool hasYaw, unsigned yaw) {
+    std::array<std::byte, 16> payload{};
+    BitWriter body(payload);
+    body.writeBits(0, 4);
+    body.writeBits(hasYaw ? 1 : 0, 7);
+    if (hasYaw) body.writeBits(yaw, 12);
+
+    std::array<std::byte, 64> packet{};
+    BitWriter writer(packet);
+    writer.writeBits(static_cast<unsigned>(PacketKind::Data), 4);
+    for (const auto width : {8u, 6u, 6u, 32u, kStreamFramingBits}) writer.writeBits(0, width);
+    writer.writeBits(0, 1);  // actions
+    writer.writeBits(0, 1);  // events
+    writer.writeBits(1, 1);  // ghosts
+    writer.writeBits(tick, 32);
+    writer.writeBits(1, 8);  // records
+    writer.writeBits(0, 1);  // controlled state
+    writer.writeBits(1, 2);  // update
+    writer.writeBits(seat, 16);
+    writer.writeBits(0, 1);  // baseline
+    writer.writeBits(static_cast<unsigned>(body.bitPosition()), kGhostLengthBits);
+    obf2::net::BitReader reader(payload);
+    for (std::size_t i = 0; i < body.bitPosition(); ++i) writer.writeBits(*reader.readBits(1), 1);
+    world.feedGhosts(std::span(packet).first(writer.byteSize()));
+  };
+
+  feed(10, true, 3072);
+  CHECK(world.seatAim(seat));
+  if (!world.seatAim(seat)) return;
+  const float firstYaw = world.seatAim(seat)->angles[0].x;
+  CHECK(firstYaw > 80.0f);
+  feed(11, false, 0);
+  CHECK_EQ(world.seatAim(seat)->angles[0].x, firstYaw);
+
+  root = 600;
+  feed(12, false, 0);
+  CHECK_EQ(world.seatAim(seat)->root, root);
+  CHECK_EQ(world.seatAim(seat)->angles[0].x, 0.0f);
+  CHECK_EQ(world.seatAimAt(seat, 10)->tick, 12u);
+  const auto shown = world.presentedSeatAngle(seat, root, 0, 12);
+  CHECK(shown && shown->x == 0.0f);
+
+  feed(14, true, 3072);
+  const auto delay = world.interpolationDelay(true) / kGhostTickMs;
+  const auto halfway = world.presentedSeatAngle(seat, root, 0, 13.0 + delay);
+  CHECK(halfway && std::abs(halfway->x - firstYaw / 2.0f) < 0.1f);
+
+  feed(40, true, 1024);
+  const auto longGapDelay = world.interpolationDelay(true) / kGhostTickMs;
+  const auto duringGap = world.presentedSeatAngle(seat, root, 0, 27.0 + longGapDelay);
+  CHECK(duringGap && std::abs(duringGap->x - firstYaw) < 0.1f);
+  const auto afterGap = world.presentedSeatAngle(seat, root, 0, 40.0 + longGapDelay);
+  CHECK(afterGap && afterGap->x < -80.0f);
+}
+
 static void testControlOwnershipFollowsSeatChanges() {
   using namespace obf2::net::bf2;
   WorldView world;
@@ -474,6 +562,8 @@ static void testInfantryOwnershipSurvivesVehicleEntry() {
 }
 
 TEST_MAIN({
+  testHullPlaybackKeepsSubframesAtHighServerTicks();
+  testSeatInterpolationAcrossHullChangesAndGaps();
   testInfantryOwnershipSurvivesVehicleEntry();
   testControlOwnershipFollowsSeatChanges();
   testProjectileDetonationQueuesOnce();
