@@ -26,6 +26,7 @@ constexpr float kRoadSlopeDepthBias = -1e-5f;
 // The shaders are supplied as MSL text: SDL_GPU hands them to the Metal compiler
 // at runtime, so for macOS a separate shader build step is not needed yet.
 // When Windows comes, these same shaders will also have to exist as SPIR-V/DXIL.
+// Keep each raw literal within MSVC's source-literal size limit.
 constexpr const char* kShaderSource = R"MSL(
 #include <metal_stdlib>
 using namespace metal;
@@ -264,7 +265,8 @@ static VertexOut placeVertex(float3 position, float3 normal, float3 tangent,
     out.position = uniforms.modelViewProjection * float4(position, w);
     out.normal = (uniforms.model * float4(normal, 0.0)).xyz;
     out.uv = uv;
-    // A sprite particle turns its texcoords, not its quad (Particles.fx:78):
+)MSL"
+R"MSL(    // A sprite particle turns its texcoords, not its quad (Particles.fx:78):
     // with sin in particleFrame.w and cos in particleColor.w, uv2 the corner's
     // offset from the cell centre, the corner (±1, ±1) is rotated and scaled
     // back into the cell; v runs down (Particles.fx:83). Identity at sin 0.
@@ -483,7 +485,8 @@ fragment float4 fragment_main(VertexOut in [[stage_in]],
     // The technique switches it on per material (`AlphaTestEnable = <AlphaTest>`,
     // `Shaders_client.zip:RaShaderSTM.fx:583`) and the line under it sets the
     // reference: `AlphaRef = 127`, with the author's own note that it is there
-    // because the setting it should come from does not work. 127 of 255.
+)MSL"
+R"MSL(    // because the setting it should come from does not work. 127 of 255.
     //
     // It is the **composite** diffuse's alpha, the detail multiplied in:
     // `getCompositeDiffuse` scales the base alpha by the detail's
@@ -684,7 +687,8 @@ fragment float4 fragment_main(VertexOut in [[stage_in]],
         }
     } else if (in.fogParams.z > 0.5) {
         // Terrain. The game draws it in several passes: one fills an
-        // accumulation buffer from the tile's baked light map, and the colour
+)MSL"
+R"MSL(        // accumulation buffer from the tile's baked light map, and the colour
         // pass reads that buffer back projectively
         // (`Shaders_client.zip:TerrainShader_Hi.fx:588` and
         // `TerrainShader_Shared.fx:170`):
@@ -894,7 +898,8 @@ fragment float4 fragment_main(VertexOut in [[stage_in]],
     // The light map's green gates it the same way it gates the sun: a wall in
     // baked shadow has no highlight either.
     if (in.fogParams.z < 0.5 && in.treeSunColor.w < 0.5 && in.material.z < 0.5) {
-        const float3 normal = shadingNormal;
+)MSL"
+R"MSL(        const float3 normal = shadingNormal;
         const float3 toSun = normalize(-in.sunDirection.xyz);
         const float3 toEye = normalize(in.cameraPosition.xyz - in.worldPosition);
         const float3 halfVec = normalize(toSun + toEye);
