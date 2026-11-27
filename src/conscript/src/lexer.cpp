@@ -1,4 +1,4 @@
-#include "obf2/con/lexer.h"
+#include "obf2/conscript/lexer.h"
 
 namespace obf2::con {
 namespace {

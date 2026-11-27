@@ -47,7 +47,7 @@ add_subdirectory(third_party/stb)
 add_subdirectory(third_party/gameswf)
 
 add_subdirectory(src/core)
-add_subdirectory(src/con)
+add_subdirectory(src/conscript)
 add_subdirectory(src/vfs)
 add_subdirectory(src/mesh)
 add_subdirectory(src/anim)

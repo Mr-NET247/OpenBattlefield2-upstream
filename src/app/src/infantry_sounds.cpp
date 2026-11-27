@@ -1,5 +1,5 @@
 #include "obf2/app/infantry_sounds.h"
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 #include "obf2/core/path.h"
 #include "obf2/game/object_template.h"
 

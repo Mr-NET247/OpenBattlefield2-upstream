@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 
 namespace obf2::app {
 

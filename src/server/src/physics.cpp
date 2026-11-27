@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 
 namespace obf2::server {
 

@@ -3,7 +3,7 @@
 #include "obf2/game/scene.h"
 #include <cmath>
 #include <map>
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 
 using namespace obf2;
 int main() {

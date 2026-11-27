@@ -4,7 +4,7 @@
 #include <cmath>
 #include <cstdio>
 
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 #include "obf2/core/path.h"
 #include "obf2/hud/combat_area.h"
 #include "obf2/hud/ingame.h"

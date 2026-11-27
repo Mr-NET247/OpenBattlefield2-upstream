@@ -3,8 +3,8 @@
 #include <vector>
 
 #include "check.h"
-#include "obf2/con/interpreter.h"
-#include "obf2/con/lexer.h"
+#include "obf2/conscript/interpreter.h"
+#include "obf2/conscript/lexer.h"
 
 using namespace obf2::con;
 

@@ -2,7 +2,7 @@
 #include <cstdint>
 
 #include "check.h"
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 #include "obf2/game/engine_update.h"
 #include "obf2/game/rotational_bundle.h"
 

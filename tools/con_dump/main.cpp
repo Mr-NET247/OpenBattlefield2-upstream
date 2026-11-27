@@ -12,7 +12,7 @@
 #include <map>
 #include <string>
 
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 #include "obf2/core/path.h"
 #include "obf2/core/platform.h"
 #include "obf2/vfs/filesystem.h"

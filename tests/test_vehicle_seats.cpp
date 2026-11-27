@@ -6,7 +6,7 @@
 #include <string>
 
 #include "check.h"
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 #include "obf2/game/vehicle_seats.h"
 #include "obf2/game/scene.h"
 

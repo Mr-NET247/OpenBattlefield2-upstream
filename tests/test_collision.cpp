@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "check.h"
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 #include "obf2/game/object_template.h"
 #include "obf2/mesh/collision.h"
 #include "obf2/server/collision_objects.h"

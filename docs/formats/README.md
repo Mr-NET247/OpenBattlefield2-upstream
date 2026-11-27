@@ -2,7 +2,7 @@
 
 | Format | Status | Where |
 |---|---|---|
-| `.con` / `.tweak` | ✅ implemented, 0 errors over the whole corpus | [con.md](con.md), `src/con` |
+| `.con` / `.tweak` | ✅ implemented, 0 errors over the whole corpus | [conscript.md](conscript.md), `src/conscript` |
 | `ObjectTemplate` (registry) | ✅ 10 182 templates, 55 classes, part hierarchy | [object-template.md](object-template.md), `src/game` |
 | Level (terrain, water, placement) | ✅ Dalian Plant whole: 51 patches, 906 objects | [level.md](level.md), `src/level` |
 | Vehicle assembly | ✅ BundledMesh + the template tree, BTR-90 and AH-1Z whole | [vehicle-assembly.md](vehicle-assembly.md), `src/game/scene.cpp` |

@@ -17,7 +17,7 @@
 #include <string_view>
 #include <vector>
 
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 #include "obf2/core/math.h"
 #include "obf2/mesh/bf2_mesh.h"
 #include "obf2/mesh/skeleton.h"

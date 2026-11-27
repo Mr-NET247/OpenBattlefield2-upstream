@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 #include "obf2/core/path.h"
 
 namespace obf2::level {

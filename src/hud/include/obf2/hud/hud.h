@@ -22,7 +22,7 @@
 #include <string_view>
 #include <vector>
 
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 
 namespace obf2::hud {
 

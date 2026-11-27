@@ -7,7 +7,7 @@
 #include "check.h"
 #include "obf2/app/kill_feed.h"
 #include "obf2/app/live_hud.h"
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 
 using namespace obf2;
 

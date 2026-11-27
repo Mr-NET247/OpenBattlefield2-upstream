@@ -5,7 +5,7 @@
 #include <string>
 
 #include "check.h"
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 #include "obf2/hud/hud.h"
 #include "obf2/hud/list_data.h"
 #include "obf2/hud/scoreboard.h"

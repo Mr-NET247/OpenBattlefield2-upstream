@@ -14,7 +14,7 @@
 #include <string>
 #include <string_view>
 
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 
 namespace obf2::game {
 

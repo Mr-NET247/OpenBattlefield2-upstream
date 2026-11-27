@@ -15,7 +15,7 @@
 #include <string_view>
 #include <unordered_map>
 
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 
 namespace obf2::engine {
 

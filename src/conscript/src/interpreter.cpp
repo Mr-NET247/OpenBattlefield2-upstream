@@ -1,4 +1,4 @@
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 
 #include <algorithm>
 #include <cctype>
@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include <unordered_map>
 
-#include "obf2/con/lexer.h"
+#include "obf2/conscript/lexer.h"
 #include "obf2/core/path.h"
 
 namespace obf2::con {

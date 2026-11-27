@@ -30,8 +30,8 @@
 #include <vector>
 
 #include "obf2/anim/camera_spring.h"
-#include "obf2/con/interpreter.h"
-#include "obf2/con/lexer.h"
+#include "obf2/conscript/interpreter.h"
+#include "obf2/conscript/lexer.h"
 #include "obf2/vfs/filesystem.h"
 
 namespace obf2::anim {

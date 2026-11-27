@@ -11,7 +11,7 @@
 #include <AL/efx.h>
 #include <SDL3/SDL_log.h>
 
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 
 namespace obf2::app {
 namespace {

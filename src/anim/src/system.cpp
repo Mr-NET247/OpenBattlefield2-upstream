@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <set>
 
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 
 namespace obf2::anim {
 namespace {

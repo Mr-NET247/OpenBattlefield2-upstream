@@ -1,12 +1,12 @@
 # The `.con` / `.tweak` language (Refractor 2)
 
-Status: **implemented** — `src/con`, verified over the whole BF2 1.5
+Status: **implemented** — `src/conscript`, verified over the whole BF2 1.5
 corpus (4777 files, 497 195 commands, 0 errors).
 
 ## What the language is
 
 It is not a config and not a tree but **a stream of commands** executed by
-the engine's interpreter. That is why there is no AST in `src/con`: every
+the engine's interpreter. That is why there is no AST in `src/conscript`: every
 line becomes a `Command` and is handed to a callback at once. State (which
 ObjectTemplate is currently "active") is kept by the consumer of the
 commands, not by the parser — the same as in Refractor itself.

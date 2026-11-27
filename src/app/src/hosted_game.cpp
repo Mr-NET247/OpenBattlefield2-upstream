@@ -2,7 +2,7 @@
 
 #include <cstdio>
 
-#include "obf2/con/interpreter.h"
+#include "obf2/conscript/interpreter.h"
 #include "obf2/engine/console.h"
 #include "obf2/level/gameplay.h"
 #include "obf2/net/connection.h"
