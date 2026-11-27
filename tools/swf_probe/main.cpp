@@ -10,9 +10,11 @@
 // library's own complaints are counted by text, the most frequent first — the
 // work list for the player, the same way `--hud-vars` is for the HUD.
 //
-// It runs on a thread with a large stack: an ActionScript loop in the movie
-// recurses, and the report must survive to say where.
+// The probe uses a large stack so it can report recursive ActionScript loops.
+// On Windows the linker sets the main thread's stack reserve.
+#if !defined(_WIN32)
 #include <pthread.h>
+#endif
 
 #include <algorithm>
 #include <cstdio>
@@ -177,12 +179,16 @@ int main(int argc, char** argv) {
   g_files = &files;
   std::printf("swf_probe: %s, %d archives\n", job.movie.c_str(), mounted);
 
+#if defined(_WIN32)
+  run(&job);
+#else
   pthread_attr_t attributes;
   pthread_attr_init(&attributes);
   pthread_attr_setstacksize(&attributes, 512u * 1024u * 1024u);
   pthread_t thread;
   pthread_create(&thread, &attributes, run, &job);
   pthread_join(thread, nullptr);
+#endif
 
   if (!job.opened) {
     std::printf("the movie did not open\n");

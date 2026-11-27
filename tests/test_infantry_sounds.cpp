@@ -1,7 +1,7 @@
 #include <filesystem>
 #include <fstream>
-#include <unistd.h>
 #include "check.h"
+#include "process_id.h"
 #include "obf2/app/infantry_sounds.h"
 
 using namespace obf2;
@@ -21,7 +21,7 @@ static void testPhaseLatch() {
 
 static void testAuthoredSlots() {
   namespace fs = std::filesystem;
-  const auto root = fs::temp_directory_path() / ("infantry_sounds_" + std::to_string(getpid()));
+  const auto root = fs::temp_directory_path() / ("infantry_sounds_" + std::to_string(obf2test::processId()));
   fs::create_directories(root / "common/material");
   {
     std::ofstream out(root / "common/material/materialManagerSettings.con");

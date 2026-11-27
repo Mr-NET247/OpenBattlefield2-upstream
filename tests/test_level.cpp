@@ -1,11 +1,11 @@
 #include <cstdio>
-#include <unistd.h>
 #include <filesystem>
 #include <fstream>
 #include <string>
 #include <vector>
 
 #include "check.h"
+#include "process_id.h"
 #include "obf2/level/level.h"
 
 namespace fs = std::filesystem;
@@ -38,7 +38,7 @@ class TempLevel {
  public:
   TempLevel() {
     root_ = fs::temp_directory_path() /
-            ("obf2_level_test_" + std::to_string(::getpid()));
+            ("obf2_level_test_" + std::to_string(obf2test::processId()));
     fs::remove_all(root_);
     fs::create_directories(root_ / "Levels" / "testmap");
   }
@@ -489,7 +489,7 @@ static void testSkydomeBlock() {
 // before the disk is touched, and one in another case than the folder is found.
 void testMountLevelName() {
   namespace fs = std::filesystem;
-  const auto root = fs::temp_directory_path() / ("obf2-mount-" + std::to_string(::getpid()));
+  const auto root = fs::temp_directory_path() / ("obf2-mount-" + std::to_string(obf2test::processId()));
   fs::create_directories(root / "Levels" / "Gulf_of_Oman");
   for (const char* bad : {"", ".", "..", "../Gulf_of_Oman", "a/b", "a\\b", "c:x"}) {
     FileSystem files;
@@ -511,8 +511,10 @@ void testMountLevelName() {
     const char end[22] = {'P', 'K', 5, 6};
     zip.write(end, sizeof(end));
   }
-  FileSystem mounted;
-  CHECK(level::mountLevel(mounted, root, "gulf_of_oman"));
+  {
+    FileSystem mounted;
+    CHECK(level::mountLevel(mounted, root, "gulf_of_oman"));
+  }  // Close the archives before deleting the fixture on Windows.
   fs::remove_all(root);
 }
 
