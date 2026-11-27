@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <deque>
+#include <filesystem>
 #include <functional>
 #include <map>
 #include <memory>
@@ -66,7 +67,7 @@ struct Settings {
   std::string playerName;
   std::int32_t profileId = 0;
   std::function<std::optional<net::bf2::ChallengeResponse>(std::string_view)> answerChallenge;
-  std::string modDir;
+  std::filesystem::path modDir;
   std::string recordTo;      // --record: where to write the captured traffic
   int ordinal = -1;          // --ordinal: which fingerprint of the archive list
   bool blockReady = false;
