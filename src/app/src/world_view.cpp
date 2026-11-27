@@ -546,9 +546,6 @@ std::optional<WorldView::VehicleView> WorldView::occupiedCamera(float lookX, flo
   const auto hull = translation(pose->position) * rotation;
   // The target: chaseOffset as a point in the hull's frame (template +0x2bc).
   const auto target = transformPoint(hull, mount->chaseOffset);
-  // chaseDistance -1: the bounding radius (at least 2) times g_cam_dist. Our
-  // seats carry no radius and g_cam_dist is not measured: 2 m stands in.
-  const float distance = mount->chaseDistance == -1.0f ? 2.0f : mount->chaseDistance;
   // Away from the target: -forward (+forward for FrontChase) plus
   // chaseAngle * up, normalised.
   const float sign = cameraViewMode_ == 4 ? -1.0f : 1.0f;
@@ -575,6 +572,24 @@ std::optional<WorldView::VehicleView> WorldView::occupiedCamera(float lookX, flo
     if (length(blended) > 1e-6f) wanted = normalize(blended);
   }
   chaseDirection_ = wanted;
+  float distance = mount->chaseDistance;
+  if (distance == -1.0f) {
+    // Keep the existing default stand-off beyond the hull's visible bounds.
+    // Measure along the final camera direction so a shifted pivot or a
+    // smoothed turn cannot put the eye inside the bounding sphere.
+    constexpr float defaultStandOff = 2.0f;
+    distance = defaultStandOff;
+    const auto* model = vehicleMesh(root, vehicle->second);
+    if (model && model->boundsRadius > 0.0f) {
+      const auto offset = transformPoint(hull, model->boundsCenter) - target;
+      const float along = dot(offset, wanted);
+      const float discriminant = model->boundsRadius * model->boundsRadius -
+                                 (dot(offset, offset) - along * along);
+      if (discriminant >= 0.0f) {
+        distance += std::max(0.0f, along + std::sqrt(discriminant));
+      }
+    }
+  }
   // The distance's speed term (the vehicle's velocity along its forward,
   // times g_acc) is not ported: g_acc is not measured.
   Vec3f eye = target + wanted * distance;
